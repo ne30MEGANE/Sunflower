@@ -1,0 +1,12 @@
+構文図式
+https://www.k-fix.jp/skill/it/01/page25.html
+
+paragraph := sentence(sentence)*
+sentence := substitution | if | loop | print
+substitution := 変数 '=' 式
+if := 'if' '(' 式 ')' '{' paragraph '}' 'else' '{' paragraph '}'
+loop := 'loop' '(' 式 ')' '{' paragraph '}'
+print := 'print' '(' 式 ')'
+式 := 項 ((+|-) 項)*
+項 := 因子 ((*|/) 因子)*
+因子 := リテラル | 変数 
