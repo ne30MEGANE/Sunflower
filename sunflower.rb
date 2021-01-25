@@ -23,9 +23,9 @@ class Sunflower
 
   def initialize
     if ARGV[0]
-      file = readlines(ARGV[0]) # プログラムファイルをオープン
-      code = file.map{|f| f.chomp}.join(' ') # 各行をスペース区切りで1行に
-      # p code # for debug
+      file = open(ARGV[0]) # プログラムファイルをオープン
+      code = file.map {|l| l.chomp }.join(' ') # 各行をスペース区切りで1行に
+      p code # for debug
       @scanner = StringScanner.new(code)
       @member = {} # 変数等を持つやつ
       eval(parse())
@@ -34,15 +34,14 @@ class Sunflower
   
   def get_token 
     # scanメソッドを叩いて合致しないとnilが返る→そのif文は実行されない
-    if token = @scanner.scan(/\A\s*#{"if|loop|print"}/)
-      # p token.intern # for debug
-      return token.intern # シンボル化して返す
+    # p "get_token先頭: #{@scanner.inspect}" # for debug
+    if token = @scanner.scan(/\s*?(if|loop|print)/)
+      return token.strip.intern # シンボル化して返す
     end
     if token = @scanner.scan(/\s*\*\-\s?\w+/) # コメント (*-と文章の間に空白があってもなくても良い)
       return :comment
     end
-    if token = @scanner.scan(/\A\s*[\(\)\{\}\=\+\-\*\/\%]/) # (){}=+-*/% たち
-      # p token.strip # for debug
+    if token = @scanner.scan(/\s*?[\(\)\{\}\=\+\-\*\/\%]/) # (){}=+-*/% たち
       case token.strip
       when "("
         return :lpar
@@ -66,13 +65,13 @@ class Sunflower
         return :mod
       end
     end
-    if token = @scanner.scan(/\A\s*[0-9]+/) # 数字
+    if token = @scanner.scan(/\A\s*?[0-9]+/) # 数字
       return token.to_f # float型にして返す
     end
-    if token = @scanner.scan(/\A\s*(\w+)/) # 変数名
+    if token = @scanner.scan(/\A\s*\".*?\"/) # "文字列"
+      return token.to_s # ""ごと全部渡す
     end
-    if token = @scanner.scan(/\A\s*\".*\"/) # "文字列"
-      return token.to_s # ""ごと全部渡す→factorで変数なのか文字列なのか判断
+    if token = @scanner.scan(/\A\s*?(\w+)/) # 変数名
     end
     
   end
@@ -114,7 +113,7 @@ class Sunflower
   def paragraph # paragraph := sentence(sentence)*
     result = [:block]
     while s = sentence() # 文をブロックにまとめる
-      # p s # for debug
+      # p "paragraph: #{s}" # for debug
       result << s
     end
     result
@@ -122,18 +121,34 @@ class Sunflower
 
   def sentence # sentence := substitution | if | loop | print
     token = get_token()
+    # p "sentence: #{token}, #{@scanner.pos}" # for debug
     case token
-    when :lbraces # { の時
     when :if # 'if' '(' 式 ')' '{' paragraph '}' 'else' '{' paragraph '}'
-    when :loop # 'loop' '(' 式 ')' '{' paragraph '}'
-    when :print # 'print' '(' 式 ')'
-      data = get_token() # 次を読んで
-      # p data # for debug
-      if data == :lpar # 左カッコだったら
-        result = [:print, expression()] # 結果を格納 evalではこう→exp[:print, 式]
-        # 式の中身はexpression以下でget_tokenするのでこれで良い
-      else # "print"の次に左カッコがこない→構文エラー
+      data = get_token()
+      if data == :lpar
+        result = [:if]
+      else
         raise Exception
+      end
+    when :loop # 'loop' '(' 回数 ')' '{' paragraph '}'
+      data = get_token()
+      if data == :lpar
+        times = expression() # ()内の式
+        if times.instance_of?(Float) # factorを通過した数値型は全部floatなので
+          if get_token() == :lbraces # {の時
+            result = [:loop, times.to_i, paragraph()]
+          end
+        else
+          raise Exception # エラー：loop回数指定が数値ではない
+        end
+      else
+        raise Exception # 構文エラー
+      end
+    when :print # 'print' '(' 式 ')'
+      if get_token() == :lpar
+        result = [:print, expression()]
+      else
+        raise Exception  # 構文エラー
       end
     when :assign # 変数 '=' 式
     else
@@ -142,24 +157,24 @@ class Sunflower
 
   def expression() # 項 ((+|-) 項)*
     result = term()
-    token = get_token()
+    token = get_token() # 先読み
     while token == :add or token == :sub
       result = [token, result, term()]
       token = get_token()
     end
-    token = unget_token() unless token.nil?
+    unget_token() unless token.nil?
+    # p "expression: #{token}, #{@scanner.pos}" # for debug
     return result
   end
 
   def term() # 因子 ((*|/) 因子)*
     result = facter()
-    token = get_token()
+    token = get_token()  # 先読み
     while token == :mul or token == :div or token == :mod
       result = [token, result, facter()]
       token = get_token()
     end
-    # p token # for debug
-    token = unget_token() unless token.nil?
+    unget_token() unless token.nil?
     return result
   end
 
@@ -167,13 +182,16 @@ class Sunflower
     token = get_token()
     if token.instance_of?(Float) # 数字
       result = token
+      get_token() # とじかっこ殺す
     elsif token =~/"(.*)"/ # "文字列"
       # p token, $1 # for debug
       result = $1
+      get_token() # とじかっこ殺す
     else # 変数
-      if @member["#{token}"] # 変数が存在するとき
+      if @member["#{token}"] # 変数が
         result = @member["#{token}"]
-      else # しない時
+        get_token() # とじかっこ殺す
+      else 
         raise Exception
       end
     end
