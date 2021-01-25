@@ -25,7 +25,7 @@ class Sunflower
     if ARGV[0]
       file = open(ARGV[0]) # プログラムファイルをオープン
       code = file.map {|l| l.chomp }.join(' ') # 各行をスペース区切りで1行に
-      p code # for debug
+      # p code # for debug
       @scanner = StringScanner.new(code)
       @member = {} # 変数等を持つやつ
       eval(parse())
@@ -85,6 +85,7 @@ class Sunflower
   end
 
   def eval(exp)
+    # p "eval: #{exp}"
     if exp.instance_of?(Array)
       case exp[0]
       when :block # まずここに来る、この時exp[1]~にsentenceが格納されている状態
@@ -95,6 +96,12 @@ class Sunflower
         end
       when :print
         return puts(eval(exp[1]))
+      when :loop
+        1.step(exp[1]){ # 指定回数繰り返す
+          exp[2].each{|sent| #ブロック内のsenteneをそれぞれ実行
+            eval(sent)
+          }
+        }
       when :add
         return eval(exp[1]) + eval(exp[2])
       when :sub
@@ -136,6 +143,11 @@ class Sunflower
         times = expression() # ()内の式
         if times.instance_of?(Float) # factorを通過した数値型は全部floatなので
           if get_token() == :lbraces # {の時
+            # ans = []
+            # while get_token != :rbraces # }が来るまで
+            #   ans << sentence()
+            # end
+            # get_token() # }ころす
             result = [:loop, times.to_i, paragraph()]
           end
         else
