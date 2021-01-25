@@ -148,7 +148,8 @@ class Sunflower
       data = get_token()
       if data == :lpar
         times = expression() # ()内の式
-        if times.instance_of?(Float) # factorを通過した数値型は全部floatなので
+        if times.instance_of?(Float) # facterを通過した数値型は全部floatなので
+          get_token() # )を消しとばす *facterの数値リテラルのとこに間違って書いてたのを消したので追加
           if get_token() == :lbraces # {の時
             result = [:loop, times.to_i, paragraph()]
           end
@@ -164,11 +165,17 @@ class Sunflower
       else
         raise Exception  # 構文エラー
       end
-    when /\w+/ # 変数名 '=' 式
+    when /\w+/ # 変数名 '=' リテラル
       next_token = get_token()
       if next_token == :assign # 代入するとき
-        # p [:assign, token, expression()] # for debug
-        result = [:assign, token, expression()]
+        next_token = get_token()
+        if next_token == :lpar # 変数名 '=' '(' 式 ')' 数値を代入する時
+          data = expression()
+          result = [:assign, token, data]
+        else # 文字列を代入する時
+          unget_token unless next_token.nil?
+          result = [:assign, token, expression()]
+        end
       else # 呼び出しの時
         result = [:member, token]
         unget_token() unless next_token.nil? # 先読みしたトークンが=じゃなかったら元に戻す
@@ -205,7 +212,7 @@ class Sunflower
     # p "facter-token: #{token}, #{@members.keys}" # for debug
     if token.instance_of?(Float) # 数字
       result = token
-      get_token()
+      # get_token()
     elsif token =~ /^(\w+)/ # 変数名(""で囲まれていない文字列)
       result = [:member, token.intern]
       get_token()
