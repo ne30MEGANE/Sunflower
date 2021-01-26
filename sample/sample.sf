@@ -1,11 +1,7 @@
-print ( 10%2 )
+foo = "Hello World!"
 
-game = "maimai"
-number = ( 1+2*3 )
+print ( foo )
 
-print ( game )
-print ( number )
-
-loop( 2 ){
-  print( game )
+loop( 3 ){
+  print( "Flower" )
 }
