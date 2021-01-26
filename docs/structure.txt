@@ -5,7 +5,7 @@ paragraph := sentence(sentence)*
 sentence := substitution | if | loop | print
 substitution := 変数 '=' 式
 if := 'if' '(' 式 ')' '{' paragraph '}' 'else' '{' paragraph '}'
-loop := 'loop' '(' 式 ')' '{' paragraph '}'
+loop := 'loop' '(' 回数を表すリテラル ')' '{' paragraph '}'
 print := 'print' '(' 式 ')'
 式 := 項 ((+|-) 項)*
 項 := 因子 ((*|/) 因子)*

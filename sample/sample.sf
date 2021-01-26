@@ -1,0 +1,11 @@
+print ( 10%2 )
+
+game = "maimai"
+number = ( 1+2*3 )
+
+print ( game )
+print ( number )
+
+loop( 2 ){
+  print( game )
+}
